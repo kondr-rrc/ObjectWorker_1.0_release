@@ -72,7 +72,6 @@ def inp_redactor(out_name, in_name, work_dir, delete_in_file = True, print_done 
     ** 
     ** Name: BC-1 Type: Displacement/Rotation
     *Boundary
-    _PickedSet14, 1, 1
     _PickedSet14, 4, 4
     _PickedSet14, 5, 5
     _PickedSet14, 6, 6
