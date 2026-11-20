@@ -123,7 +123,7 @@ def thinkness_graph(obj, obj_dir):
 
     np.savetxt(f"{obj_dir}/{obj}_slices.dat", thickness_data)
 
-WORK_DIR = r"C:\Users\User\Desktop\Object Worker"
+WORK_DIR = r"C:\Users\student\Desktop\ObjectWorker_1.0_release"
 OBJ_DIR = Path(WORK_DIR) / "OBJECT_FOLDER"
 
 PoreNum = 0
