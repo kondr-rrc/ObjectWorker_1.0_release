@@ -62,6 +62,7 @@ def compute_E(odb_path):
     return E_eff, u2_roof, u2_bottom.mean(), dL, y_range, u2_bottom.size
 
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: abaqus python batch_E.py <folder>")
@@ -73,68 +74,67 @@ def main():
         sys.exit(1)
 
     odb_files = sorted(glob.glob(os.path.join(folder, '*.odb')))
-    print("Найдено ODB-файлов: {} в {}".format(len(odb_files), folder))
-    if len(odb_files) != EXPECTED_FILES:
-        print("  ⚠️  WARNING: ожидалось {}, получено {}".format(
-            EXPECTED_FILES, len(odb_files)))
+    if not odb_files:
+        print("ODB-файлы не найдены в: {}".format(folder))
+        return
 
-    t0 = time.perf_counter()
-    results = []   # [(filename, E, u2_roof, u2_bottom, dL, y_range, N_bottom)]
+    folder_name = os.path.basename(os.path.normpath(os.path.abspath(folder)))
+    txt_path = os.path.join(folder, '{}_E_results.txt'.format(folder_name))
+    done_suffixes = set()
 
+    # Читаем уже посчитанные суффиксы, если txt существует
+    if os.path.exists(txt_path):
+        with open(txt_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if parts:
+                    done_suffixes.add(parts[0])
+
+    # Ищем первый ещё не посчитанный ODB-файл
+    target_path = None
+    target_suffix = None
     for path in odb_files:
-        name = os.path.basename(path)
-        print("\n" + "=" * 62)
-        print("  {}".format(name))
-        print("-" * 62)
-        try:
-            E, u2r, u2b, dL, yr, n = compute_E(path)
-            print("  Y-диапазон mesh    : {:.4f} мм  (L0 задан: {:.4f})".format(yr, L0))
-            if abs(yr - L0) > L0_CHECK_TOL * L0:
-                print("  ⚠️  Y-диапазон ≠ L0! Проверьте значение L0.")
-            print("  Узлов на bottom    : {}".format(n))
-            print("  U2 roof  (RP)      : {:.6e} мм".format(u2r))
-            print("  U2 bottom (mean)   : {:.6e} мм".format(u2b))
-            print("  ΔL                 : {:.6e} мм".format(dL))
-            print("  E_eff              : {:.2f} МПа".format(E))
-            results.append((name, E, u2r, u2b, dL, yr, n))
-        except Exception as e:
-            print("  ❌ ERROR: {}".format(e))
+        base_name = os.path.splitext(os.path.basename(path))[0]
+        suffix = base_name.rsplit('_', 1)[-1]
+        if suffix not in done_suffixes:
+            target_path = path
+            target_suffix = suffix
+            break
+
+    if target_path is None:
+        print("Все ODB-файлы в папке уже посчитаны (суффиксы: {}).".format(
+            ', '.join(sorted(done_suffixes))))
+        return
+
+    name = os.path.basename(target_path)
+    t0 = time.time()
 
     print("\n" + "=" * 62)
-    print("  ИТОГИ")
-    print("=" * 62)
-
-    if not results:
-        print("  Ни одного успешного расчёта — выходим.")
-        return
-
-    for name, E, *_ in results:
-        print("  {:45s}  E = {:10.2f} МПа".format(name, E))
-
-    if len(results) < 2:
-        print("\n  Недостаточно результатов для расчёта анизотропии.")
-        return
-
-    E_values = [r[1] for r in results]
-    names    = [r[0] for r in results]
-    i_max    = int(np.argmax(E_values))
-    i_min    = int(np.argmin(E_values))
-    E_max    = E_values[i_max]
-    E_min    = E_values[i_min]
-    A        = E_max / E_min
-
+    print("  Обработка: {} (суффикс: {})".format(name, target_suffix))
     print("-" * 62)
-    print("  E_max = {:10.2f} МПа   [{}]".format(E_max, names[i_max]))
-    print("  E_min = {:10.2f} МПа   [{}]".format(E_min, names[i_min]))
-    print("  A = E_max / E_min = {:.4f}".format(A))
-    print("  Время: {:.2f} c".format(time.perf_counter() - t0))
-    print("=" * 62)
 
-    # (опц.) Сохранить сводку в npy рядом с ODB
-    summary = np.array([[E for _, E, *_ in results]])
-    out_path = os.path.join(folder, 'anisotropy_summary.npy')
-    np.save(out_path, summary)
-    print("  Сводка сохранена: {}".format(out_path))
+    try:
+        E, u2r, u2b, dL, yr, n = compute_E(target_path)
+        print("  Y-диапазон mesh    : {:.4f} мм  (L0 задан: {:.4f})".format(yr, L0))
+        if abs(yr - L0) > L0_CHECK_TOL * L0:
+            print("  WARNING: Y-диапазон != L0! Проверьте значение L0.")
+        print("  Узлов на bottom    : {}".format(n))
+        print("  U2 roof  (RP)      : {:.6e} мм".format(u2r))
+        print("  U2 bottom (mean)   : {:.6e} мм".format(u2b))
+        print("  dL                 : {:.6e} мм".format(dL))
+        print("  E_eff              : {:.2f} МПа".format(E))
+
+        # Дописываем результат в txt (создаст файл, если его ещё нет)
+        with open(txt_path, 'a') as f:
+            f.write("{} {:.6f}\n".format(target_suffix, E))
+
+        print("-" * 62)
+        print("  Сохранено в: {}".format(txt_path))
+        print("  Время: {:.2f} c".format(time.time() - t0))
+        print("=" * 62)
+    except Exception as e:
+        print("  ERROR: {}".format(e))
+        sys.exit(1)
 
 
 if __name__ == '__main__':

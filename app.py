@@ -530,6 +530,40 @@ if start_btn:
                             elapsed_abq = time.perf_counter() - start_abaqus_time
                             console.add_line(f"Расчёт {out_name} завершён за {elapsed_abq:.2f} с", force=True)
 
+                        # --- Счёт коэффициента анизотропии после всех 3 направлений ---
+                        e_results_path = obj_dir / f"{obj_dir.name}_E_results.txt"
+                        if e_results_path.exists():
+                            e_values = {}
+                            with open(e_results_path, "r", encoding="utf-8") as f:
+                                for line in f:
+                                    parts = line.strip().split()
+                                    if len(parts) >= 2 and parts[0] in ("X", "Y", "Z"):
+                                        e_values[parts[0]] = float(parts[1])
+
+                            if len(e_values) >= 2:
+                                e_max = max(e_values.values())
+                                e_min = min(e_values.values())
+                                anisotropy = e_max / e_min
+
+                                with open(e_results_path, "a", encoding="utf-8") as f:
+                                    f.write(f"A {anisotropy:.6f}\n")
+
+                                console.add_line(
+                                    f"[{obj}] Коэффициент анизотропии A = {anisotropy:.4f} "
+                                    f"(E_max={e_max:.2f}, E_min={e_min:.2f})",
+                                    force=True,
+                                )
+                            else:
+                                console.add_line(
+                                    f"[{obj}] Недостаточно данных в {e_results_path.name} для расчёта анизотропии",
+                                    force=True,
+                                )
+                        else:
+                            console.add_line(
+                                f"[{obj}] Файл {e_results_path.name} не найден",
+                                force=True,
+                            )
+
                     # Перемещение .obj файла в его папку
                     src_obj = obj_dir_path / f"{obj}.obj"
                     if src_obj.exists():
