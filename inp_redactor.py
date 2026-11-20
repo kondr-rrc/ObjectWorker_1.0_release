@@ -72,15 +72,16 @@ def inp_redactor(out_name, in_name, work_dir, delete_in_file = True, print_done 
     ** 
     ** Name: BC-1 Type: Displacement/Rotation
     *Boundary
+    _PickedSet14, 2, 2    
     _PickedSet14, 4, 4
     _PickedSet14, 5, 5
     _PickedSet14, 6, 6
     ** Name: BC-2 Type: Displacement/Rotation
     *Boundary
-    _PickedSet15, 2, 2
+    _PickedSet15, 3, 3
     ** Name: BC-3 Type: Displacement/Rotation
     *Boundary
-    _PickedSet16, 2, 2
+    _PickedSet16, 1, 1
     _PickedSet16, 3, 3
     ** 
     ** LOADS

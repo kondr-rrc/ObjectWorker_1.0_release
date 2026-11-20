@@ -98,6 +98,9 @@ def thinkness_graph(obj, obj_dir):
     for slice in range(SliceNum):
         thickness_data[slice] = local_pore_and_inclusions_thickness((slice + 1), str(slice_path))
 
+    #Первый слайс всегда косячный из-за оссобенностей слайсера и алгоритма создания сетки
+    thickness_data[0] = thickness_data[1]
+
     l_pixel = 5 / 256  # Длина пикселя в мм
     thickness_data = l_pixel * thickness_data
     slice_coord = np.linspace(0.0, 5.0, SliceNum)
